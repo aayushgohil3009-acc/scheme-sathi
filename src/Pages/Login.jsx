@@ -5,9 +5,9 @@ import {
   signInWithEmailAndPassword,
   updateProfile
 } from "firebase/auth";
-import { auth } from "../firebase";
+import { auth, googleProvider, signInWithPopup } from "../firebase";
 
-function Login() {
+function Login({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -51,11 +51,34 @@ function Login() {
           form.password
         );
         await updateProfile(result.user, { displayName: form.name });
+        onLogin(result.user);
       } else {
-        await signInWithEmailAndPassword(auth, form.email, form.password);
+        const result = await signInWithEmailAndPassword(
+          auth,
+          form.email,
+          form.password
+        );
+        onLogin(result.user);
       }
     } catch (authError) {
       setError(getAuthErrorMessage(authError.code));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setMessage("");
+    setLoading(true);
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      onLogin(result.user);
+    } catch (authError) {
+      if (authError.code !== "auth/popup-closed-by-user") {
+        setError(getAuthErrorMessage(authError.code));
+      }
     } finally {
       setLoading(false);
     }
@@ -153,6 +176,21 @@ function Login() {
           </button>
 
         </form>
+
+        {!isRegister && (
+          <>
+            <div className="auth-divider"><span>or</span></div>
+            <button
+              type="button"
+              className="google-button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+            >
+              <span className="google-icon">G</span>
+              Continue with Google
+            </button>
+          </>
+        )}
 
         <p className="auth-switch">
           {isRegister ? (

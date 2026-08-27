@@ -1,7 +1,7 @@
 import StatCard from "../components/StatCard";
 import SchemeCard from "../components/SchemeCard";
 
-function Dashboard() {
+function Dashboard({ onViewScheme }) {
 
   return (
     <div>

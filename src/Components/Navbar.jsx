@@ -1,7 +1,4 @@
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
-
-function Navbar({ user }) {
+function Navbar({ user, onLogout }) {
   const userName = user.displayName || user.email?.split("@")[0] || "User";
 
   return (
@@ -33,7 +30,7 @@ function Navbar({ user }) {
           </div>
         </div>
 
-        <button className="logout-btn" onClick={() => signOut(auth)}>
+        <button className="logout-btn" onClick={onLogout}>
           Logout
         </button>
 

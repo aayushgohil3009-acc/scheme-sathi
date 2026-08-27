@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Login from "./pages/Login";
@@ -18,6 +18,12 @@ function App() {
   const [activePage, setActivePage] = useState("Dashboard");
   const [selectedScheme, setSelectedScheme] = useState(null);
 
+  const handleLogin = (authenticatedUser) => {
+    setUser(authenticatedUser);
+  };
+
+  const handleLogout = () => signOut(auth);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -32,7 +38,7 @@ function App() {
   }
 
   if (!user) {
-    return <Login />;
+    return <Login onLogin={handleLogin} />;
   }
 
   const renderPage = () => {
@@ -72,7 +78,7 @@ function App() {
       />
 
       <div className="main-area">
-        <Navbar user={user} />
+        <Navbar user={user} onLogout={handleLogout} />
         <main className="content">{renderPage()}</main>
       </div>
     </div>
