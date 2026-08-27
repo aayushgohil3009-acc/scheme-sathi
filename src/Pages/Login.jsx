@@ -1,7 +1,17 @@
 import { useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  updateProfile
+} from "firebase/auth";
+import { auth } from "../firebase";
 
-function Login({ onLogin }) {
+function Login() {
   const [isRegister, setIsRegister] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -16,21 +26,57 @@ function Login({ onLogin }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setMessage("");
 
     if (!form.email || !form.password) {
-      alert("Please fill in all required fields.");
+      setError("Please fill in all required fields.");
       return;
     }
 
     if (isRegister && !form.name) {
-      alert("Please enter your name.");
+      setError("Please enter your name.");
       return;
     }
 
-    // Demo only — no real auth backend yet
-    onLogin({ name: form.name || "Aayush" });
+    setLoading(true);
+
+    try {
+      if (isRegister) {
+        const result = await createUserWithEmailAndPassword(
+          auth,
+          form.email,
+          form.password
+        );
+        await updateProfile(result.user, { displayName: form.name });
+      } else {
+        await signInWithEmailAndPassword(auth, form.email, form.password);
+      }
+    } catch (authError) {
+      setError(getAuthErrorMessage(authError.code));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+
+    if (!form.email) {
+      setError("Enter your email address first.");
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, form.email);
+      setMessage("Password reset email sent. Check your inbox.");
+    } catch (authError) {
+      setError(getAuthErrorMessage(authError.code));
+    }
   };
 
   return (
@@ -93,12 +139,17 @@ function Login({ onLogin }) {
 
           {!isRegister && (
             <div className="auth-forgot">
-              <a href="#">Forgot password?</a>
+              <a href="#forgot-password" onClick={handlePasswordReset}>
+                Forgot password?
+              </a>
             </div>
           )}
 
-          <button type="submit" className="primary-button full">
-            {isRegister ? "Create Account" : "Log In"}
+          {error && <p className="auth-message error">{error}</p>}
+          {message && <p className="auth-message success">{message}</p>}
+
+          <button type="submit" className="primary-button full" disabled={loading}>
+            {loading ? "Please wait..." : isRegister ? "Create Account" : "Log In"}
           </button>
 
         </form>
@@ -121,6 +172,19 @@ function Login({ onLogin }) {
 
     </div>
   );
+}
+
+function getAuthErrorMessage(code) {
+  const messages = {
+    "auth/email-already-in-use": "An account with this email already exists.",
+    "auth/invalid-credential": "Invalid email or password.",
+    "auth/invalid-email": "Enter a valid email address.",
+    "auth/weak-password": "Password must be at least 6 characters.",
+    "auth/user-disabled": "This account has been disabled.",
+    "auth/user-not-found": "No account was found with this email."
+  };
+
+  return messages[code] || "Authentication failed. Please try again.";
 }
 
 export default Login;

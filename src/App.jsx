@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Login from "./pages/Login";
+import { auth } from "./firebase";
 
 import Dashboard from "./pages/Dashboard";
 import SchemeMatcher from "./pages/SchemeMatcher";
@@ -12,11 +14,25 @@ import SchemeDetails from "./pages/SchemeDetails";
 
 function App() {
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [activePage, setActivePage] = useState("Dashboard");
   const [selectedScheme, setSelectedScheme] = useState(null);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  if (authLoading) {
+    return <div className="auth-loading">Loading...</div>;
+  }
+
   if (!user) {
-    return <Login onLogin={(u) => setUser(u)} />;
+    return <Login />;
   }
 
   const renderPage = () => {
@@ -56,7 +72,7 @@ function App() {
       />
 
       <div className="main-area">
-        <Navbar onLogout={() => setUser(null)} />
+        <Navbar user={user} />
         <main className="content">{renderPage()}</main>
       </div>
     </div>

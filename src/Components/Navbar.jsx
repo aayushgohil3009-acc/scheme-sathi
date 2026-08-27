@@ -1,4 +1,9 @@
-function Navbar({ onLogout }) {
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase";
+
+function Navbar({ user }) {
+  const userName = user.displayName || user.email?.split("@")[0] || "User";
+
   return (
     <header className="navbar">
 
@@ -19,16 +24,16 @@ function Navbar({ onLogout }) {
 
         <div className="user-mini">
           <div className="avatar">
-            A
+            {userName.charAt(0).toUpperCase()}
           </div>
 
           <div>
-            <strong>Aayush</strong>
+            <strong>{userName}</strong>
             <small>Entrepreneur</small>
           </div>
         </div>
 
-        <button className="logout-btn" onClick={onLogout}>
+        <button className="logout-btn" onClick={() => signOut(auth)}>
           Logout
         </button>
 

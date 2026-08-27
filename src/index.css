@@ -1059,6 +1059,26 @@ button {
   margin-bottom: 8px;
 }
 
+.auth-message {
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+
+.auth-message.error {
+  color: #dc2626;
+}
+
+.auth-message.success {
+  color: #15803d;
+}
+
+.auth-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: #667085;
+}
+
 .auth-subtext {
   text-align: center;
   color: #7b8495;
