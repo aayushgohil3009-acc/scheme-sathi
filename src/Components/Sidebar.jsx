@@ -18,6 +18,10 @@ function Sidebar({ activePage, setActivePage }) {
       icon: "⌖"
     },
     {
+      name: "Applications",
+      icon: "▣"
+    },
+    {
       name: "Profile",
       icon: "◉"
     }

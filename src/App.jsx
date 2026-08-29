@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import Navbar from "./components/Navbar";
-import Sidebar from "./components/Sidebar";
-import Login from "./pages/Login";
-import { auth } from "./firebase";
+import Navbar from "./Components/Navbar";
+import Sidebar from "./Components/Sidebar";
+import Login from "./Pages/Login";
+import { onAuthStateChanged, logoutUser } from "./firebase/auth";
 
-import Dashboard from "./pages/Dashboard";
-import SchemeMatcher from "./pages/SchemeMatcher";
-import Calculator from "./pages/Calculator";
-import Partners from "./pages/Partners";
-import Profile from "./pages/Profile";
-import SchemeDetails from "./pages/SchemeDetails";
+import Dashboard from "./Pages/Dashboard";
+import SchemeMatcher from "./Pages/SchemeMatcher";
+import Calculator from "./Pages/Calculator";
+import Partners from "./Pages/Partners";
+import Profile from "./Pages/Profile";
+import Applications from "./Pages/Applications";
+import SchemeDetails from "./Pages/SchemeDetails";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -22,10 +22,13 @@ function App() {
     setUser(authenticatedUser);
   };
 
-  const handleLogout = () => signOut(auth);
+  const handleLogout = async () => {
+    await logoutUser();
+    setUser(null);
+  };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
     });
@@ -53,17 +56,31 @@ function App() {
 
     switch (activePage) {
       case "Dashboard":
-        return <Dashboard onViewScheme={setSelectedScheme} />;
+        return (
+          <Dashboard
+            user={user}
+            onViewScheme={setSelectedScheme}
+            onNavigate={setActivePage}
+          />
+        );
       case "Scheme Matcher":
-        return <SchemeMatcher />;
+        return <SchemeMatcher user={user} />;
       case "Financial Calculator":
         return <Calculator />;
       case "Channel Partners":
-        return <Partners />;
+        return <Partners user={user} />;
+      case "Applications":
+        return <Applications user={user} />;
       case "Profile":
-        return <Profile />;
+        return <Profile user={user} />;
       default:
-        return <Dashboard onViewScheme={setSelectedScheme} />;
+        return (
+          <Dashboard
+            user={user}
+            onViewScheme={setSelectedScheme}
+            onNavigate={setActivePage}
+          />
+        );
     }
   };
 

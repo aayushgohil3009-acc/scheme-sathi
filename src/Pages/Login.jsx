@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-  updateProfile
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
-import { auth, googleProvider, signInWithPopup } from "../firebase";
+import { auth } from "../firebase/firebaseConfig";
+import { loginUser, registerUser, sendResetLink } from "../firebase/auth";
 
 function Login({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
@@ -45,23 +44,21 @@ function Login({ onLogin }) {
 
     try {
       if (isRegister) {
-        const result = await createUserWithEmailAndPassword(
-          auth,
-          form.email,
-          form.password
-        );
-        await updateProfile(result.user, { displayName: form.name });
-        onLogin(result.user);
+        const result = await registerUser({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+        });
+        onLogin(result);
       } else {
-        const result = await signInWithEmailAndPassword(
-          auth,
-          form.email,
-          form.password
-        );
-        onLogin(result.user);
+        const result = await loginUser({
+          email: form.email,
+          password: form.password,
+        });
+        onLogin(result);
       }
     } catch (authError) {
-      setError(getAuthErrorMessage(authError.code));
+      setError(authError.message || getAuthErrorMessage("auth/unknown"));
     } finally {
       setLoading(false);
     }
@@ -73,12 +70,18 @@ function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: "select_account",
+      });
+
+      const result = await signInWithPopup(auth, provider);
       onLogin(result.user);
     } catch (authError) {
-      if (authError.code !== "auth/popup-closed-by-user") {
-        setError(getAuthErrorMessage(authError.code));
-      }
+      const friendlyMessage =
+        getAuthErrorMessage(authError?.code) ||
+        (authError?.message || "Google sign-in failed.");
+      setError(friendlyMessage);
     } finally {
       setLoading(false);
     }
@@ -95,10 +98,10 @@ function Login({ onLogin }) {
     }
 
     try {
-      await sendPasswordResetEmail(auth, form.email);
+      await sendResetLink(form.email);
       setMessage("Password reset email sent. Check your inbox.");
     } catch (authError) {
-      setError(getAuthErrorMessage(authError.code));
+      setError(authError.message || getAuthErrorMessage("auth/unknown"));
     }
   };
 
@@ -219,7 +222,14 @@ function getAuthErrorMessage(code) {
     "auth/invalid-email": "Enter a valid email address.",
     "auth/weak-password": "Password must be at least 6 characters.",
     "auth/user-disabled": "This account has been disabled.",
-    "auth/user-not-found": "No account was found with this email."
+    "auth/user-not-found": "No account was found with this email.",
+    "auth/popup-blocked": "Google sign-in was blocked by the browser. Please allow popups and try again.",
+    "auth/popup-closed-by-user": "Google sign-in was cancelled.",
+    "auth/unauthorized-domain": "This domain is not authorized in Firebase. Add localhost as an authorized domain.",
+    "auth/operation-not-allowed": "Google sign-in is not enabled in Firebase Authentication.",
+    "auth/account-exists-with-different-credential": "An account already exists with a different sign-in method.",
+    "auth/too-many-requests": "Too many sign-in attempts. Please wait a moment and try again.",
+    "auth/network-request-failed": "Network connection failed. Check your internet and try again."
   };
 
   return messages[code] || "Authentication failed. Please try again.";
