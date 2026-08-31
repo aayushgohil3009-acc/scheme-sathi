@@ -159,30 +159,7 @@ The Firebase SDK package is already included in the project. To install it manua
 npm install firebase
 ```
 
-### Firebase configuration
-
-Copy `.env.example` to `.env` and fill in the values from Firebase Console -> **Project settings** -> **General** -> **Your apps** -> **Web app**.
-
-```env
-VITE_FIREBASE_API_KEY=your-api-key
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
-VITE_FIREBASE_APP_ID=your-app-id
-VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
-```
-
-The required Firebase config keys are `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`, and optionally `measurementId`. Vite exposes only variables prefixed with `VITE_` to browser code.
-
-Never commit `.env`. It is already excluded by `.gitignore`; commit `.env.example` instead.
-
-In Firebase Console, also verify:
-
-1. Authentication -> Sign-in method -> **Email/Password** is enabled.
-2. Authentication -> Sign-in method -> **Google** is enabled.
-3. Authentication -> Settings -> Authorized domains includes `localhost` for local development.
-4. Add the production domain to Authorized domains before deploying.
+**Important:** Never commit `.env` or other secret files to GitHub. These files are already excluded in `.gitignore`. Keep your Firebase API keys and credentials private.
 
 ### Run locally
 
