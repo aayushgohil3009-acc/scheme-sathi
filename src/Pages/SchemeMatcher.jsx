@@ -31,19 +31,30 @@ function SchemeMatcher({ user }) {
 
       try {
         const [userProfile, allSchemes] = await Promise.all([
-          getUserProfile(user.uid),
-          getAllSchemes(),
+          getUserProfile(user.uid).catch(err => {
+            console.error("Profile load error:", err);
+            return null;
+          }),
+          getAllSchemes().catch(err => {
+            console.error("Schemes load error:", err);
+            return [];
+          }),
         ]);
 
         setProfile(userProfile || {});
         setSchemes(allSchemes || []);
-        setForm((current) => ({
-          ...current,
-          income: userProfile?.annualIncome || "",
-          education: userProfile?.education || "",
-        }));
+        setError(""); // Clear any previous errors
+        
+        if (userProfile) {
+          setForm((current) => ({
+            ...current,
+            income: userProfile.annualIncome || "",
+            education: userProfile.education || "",
+          }));
+        }
       } catch (err) {
-        setError(err.message || "Unable to load schemes.");
+        console.error("Unexpected error loading data:", err);
+        setError("Unable to load data. Please refresh the page.");
       } finally {
         setLoading(false);
       }
@@ -110,7 +121,22 @@ function SchemeMatcher({ user }) {
   }
 
   if (error) {
-    return <div className="empty-result"><h2>Unable to load recommendations</h2><p>{error}</p></div>;
+    return (
+      <div className="empty-result">
+        <h2>⚠️ Unable to load recommendations</h2>
+        <p>{error}</p>
+        <button 
+          className="primary-button"
+          onClick={() => {
+            setError("");
+            window.location.reload();
+          }}
+          style={{ marginTop: "20px" }}
+        >
+          🔄 Refresh Page
+        </button>
+      </div>
+    );
   }
 
   return (

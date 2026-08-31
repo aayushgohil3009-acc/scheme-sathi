@@ -16,7 +16,9 @@ export async function getAllSchemes() {
     const snapshot = await getDocs(query(schemeCollection, where("active", "==", true)));
     return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() }));
   } catch (error) {
-    throw new Error(getFriendlyErrorMessage(error, "Unable to load available schemes."));
+    console.error("Error loading schemes:", error);
+    // Return empty array instead of throwing to allow app to continue
+    return [];
   }
 }
 

@@ -40,14 +40,22 @@ export async function createUserProfile(uid, data) {
 
 export async function getUserProfile(uid) {
   try {
+    if (!uid) {
+      return null;
+    }
     const snapshot = await getDoc(doc(db, "users", uid));
     if (!snapshot.exists()) {
+      // Return default profile if doesn't exist yet
+      console.warn("User profile not found, returning default");
       return null;
     }
     return { id: snapshot.id, ...snapshot.data() };
   } catch (error) {
-    throw new Error(getFriendlyErrorMessage(error, "Unable to load your profile."));
+    console.error("Error loading profile:", error);
+    // Return null instead of throwing to allow app to continue with defaults
+    return null;
   }
+}
 }
 
 export async function updateUserProfile(uid, data) {
