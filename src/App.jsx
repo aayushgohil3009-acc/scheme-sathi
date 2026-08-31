@@ -1,16 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import Navbar from "./Components/Navbar";
 import Sidebar from "./Components/Sidebar";
 import Login from "./Pages/Login";
 import { onAuthStateChanged, logoutUser } from "./firebase/auth";
 
-import Dashboard from "./Pages/Dashboard";
-import SchemeMatcher from "./Pages/SchemeMatcher";
-import Calculator from "./Pages/Calculator";
-import Partners from "./Pages/Partners";
-import Profile from "./Pages/Profile";
-import Applications from "./Pages/Applications";
-import SchemeDetails from "./Pages/SchemeDetails";
+// Lazy load pages for better performance
+const Dashboard = lazy(() => import("./Pages/Dashboard"));
+const SchemeMatcher = lazy(() => import("./Pages/SchemeMatcher"));
+const Calculator = lazy(() => import("./Pages/Calculator"));
+const Partners = lazy(() => import("./Pages/Partners"));
+const Profile = lazy(() => import("./Pages/Profile"));
+const Applications = lazy(() => import("./Pages/Applications"));
+const SchemeDetails = lazy(() => import("./Pages/SchemeDetails"));
+
+// Loading component for lazy pages
+const PageLoader = () => (
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+    <div style={{ textAlign: "center" }}>
+      <div style={{ fontSize: "24px", marginBottom: "10px" }}>⏳</div>
+      <p>Loading...</p>
+    </div>
+  </div>
+);
 
 function App() {
   const [user, setUser] = useState(null);
@@ -47,39 +58,65 @@ function App() {
   const renderPage = () => {
     if (selectedScheme) {
       return (
-        <SchemeDetails
-          scheme={selectedScheme}
-          onBack={() => setSelectedScheme(null)}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <SchemeDetails
+            scheme={selectedScheme}
+            onBack={() => setSelectedScheme(null)}
+          />
+        </Suspense>
       );
     }
 
     switch (activePage) {
       case "Dashboard":
         return (
-          <Dashboard
-            user={user}
-            onViewScheme={setSelectedScheme}
-            onNavigate={setActivePage}
-          />
+          <Suspense fallback={<PageLoader />}>
+            <Dashboard
+              user={user}
+              onViewScheme={setSelectedScheme}
+              onNavigate={setActivePage}
+            />
+          </Suspense>
         );
       case "Scheme Matcher":
-        return <SchemeMatcher user={user} />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <SchemeMatcher user={user} />
+          </Suspense>
+        );
       case "Financial Calculator":
-        return <Calculator />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <Calculator />
+          </Suspense>
+        );
       case "Channel Partners":
-        return <Partners user={user} />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <Partners user={user} />
+          </Suspense>
+        );
       case "Applications":
-        return <Applications user={user} />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <Applications user={user} />
+          </Suspense>
+        );
       case "Profile":
-        return <Profile user={user} />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <Profile user={user} />
+          </Suspense>
+        );
       default:
         return (
-          <Dashboard
-            user={user}
-            onViewScheme={setSelectedScheme}
-            onNavigate={setActivePage}
-          />
+          <Suspense fallback={<PageLoader />}>
+            <Dashboard
+              user={user}
+              onViewScheme={setSelectedScheme}
+              onNavigate={setActivePage}
+            />
+          </Suspense>
         );
     }
   };
