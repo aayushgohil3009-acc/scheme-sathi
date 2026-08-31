@@ -12,6 +12,9 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
 import { getFriendlyErrorMessage } from "./firestore";
 
+// Cache key for quick auth check
+const AUTH_CACHE_KEY = "scheme_sathi_auth_cache";
+
 export async function initializeAuthPersistence() {
   try {
     await setPersistence(auth, browserLocalPersistence);
@@ -20,7 +23,10 @@ export async function initializeAuthPersistence() {
   }
 }
 
-initializeAuthPersistence();
+// Initialize persistence asynchronously (don't block app load)
+if (typeof window !== 'undefined') {
+  initializeAuthPersistence().catch(err => console.warn("Persistence init:", err));
+}
 
 async function ensureUserProfile(firebaseUser) {
   if (!firebaseUser?.uid) {

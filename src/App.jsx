@@ -71,8 +71,40 @@ function App() {
   };
 
   useEffect(() => {
+    // Fast path: Check localStorage cache first
+    const cachedAuth = localStorage.getItem("scheme_sathi_auth_cache");
+    if (cachedAuth) {
+      try {
+        const parsed = JSON.parse(cachedAuth);
+        if (parsed && parsed.uid) {
+          setUser(parsed);
+          // Still verify with Firebase in background
+          setAuthLoading(false);
+        }
+      } catch (e) {
+        console.log("Cache parse error:", e);
+      }
+    }
+
+    // Verify with Firebase
     const unsubscribe = onAuthStateChanged((currentUser) => {
       setUser(currentUser);
+      
+      // Cache the auth state for fast next load
+      if (currentUser) {
+        localStorage.setItem(
+          "scheme_sathi_auth_cache",
+          JSON.stringify({
+            uid: currentUser.uid,
+            email: currentUser.email,
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL,
+          })
+        );
+      } else {
+        localStorage.removeItem("scheme_sathi_auth_cache");
+      }
+      
       setAuthLoading(false);
     });
 

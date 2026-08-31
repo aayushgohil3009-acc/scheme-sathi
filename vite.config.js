@@ -9,14 +9,28 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules/firebase')) {
-            return 'firebase';
+            return 'firebase-bundle';
           }
           if (id.includes('node_modules/react')) {
-            return 'vendor';
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules')) {
+            return 'vendor-other';
           }
         }
       }
     },
     chunkSizeWarningLimit: 600,
+    cssCodeSplit: true,
+    reportCompressedSize: false,
+    sourcemap: false,
+  },
+  server: {
+    headers: {
+      'Cache-Control': 'public, max-age=31536000',
+    }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
   }
 })
