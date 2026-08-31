@@ -56,7 +56,6 @@ export async function getUserProfile(uid) {
     return null;
   }
 }
-}
 
 export async function updateUserProfile(uid, data) {
   try {

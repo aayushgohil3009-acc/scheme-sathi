@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import StatCard from "../Components/StatCard";
 import SchemeCard from "../Components/SchemeCard";
+import SchemeSeedButton from "../Components/SchemeSeedButton";
 
 import { getUserProfile } from "../firebase/userService";
 import { getAllSchemes } from "../firebase/schemeService";
@@ -770,6 +771,10 @@ function Dashboard({
           ) : (
 
             <div className="empty-result">
+              
+              {schemes.length === 0 && (
+                <SchemeSeedButton />
+              )}
 
               <div className="ai-circle">
                 ✦
