@@ -185,6 +185,30 @@ npm run preview
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Run ESLint across the project |
 
+## AI-Powered Scheme Matching
+
+The Scheme Matcher now includes optional AI-powered recommendations using OpenAI's GPT model. This provides intelligent, personalized scheme suggestions based on user profiles and project details.
+
+### Enabling AI Recommendations
+
+To use AI recommendations, you need an OpenAI API key:
+
+1. Get an API key from [OpenAI API](https://platform.openai.com/api-keys)
+2. Add it to your `.env` file:
+   ```
+   VITE_OPENAI_API_KEY=your-openai-api-key
+   ```
+3. In the Scheme Matcher form, check "Use AI for smarter recommendations" before submitting
+4. The AI will analyze your profile and project details to recommend the best-suited scheme
+
+### Features
+- **Intelligent Matching**: AI analyzes eligibility beyond simple rule-based matching
+- **Personalized Guidance**: Provides next steps tailored to your specific situation
+- **Eligibility Analysis**: Shows match percentage and identifies any eligibility gaps
+- **Fallback Mode**: If AI is unavailable, the app automatically uses rule-based matching
+
+**Important:** Keep your OpenAI API key private. Never commit it to version control.
+
 ## Firebase Integration
 
 Firebase is initialized in `src/firebase.js`. The module exports the shared `auth` instance, a `GoogleAuthProvider`, and the popup sign-in function. `App.jsx` subscribes to `onAuthStateChanged`, so Firebase remains the source of truth for the current session instead of manually managed `localStorage` state.

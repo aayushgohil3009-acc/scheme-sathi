@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAllSchemes, getEligibleSchemes } from "../firebase/schemeService";
 import { getUserProfile } from "../firebase/userService";
+import { getAISchemeRecommendation } from "../firebase/aiService";
 
 function SchemeMatcher({ user }) {
   const [form, setForm] = useState({
@@ -17,6 +18,9 @@ function SchemeMatcher({ user }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [useAI, setUseAI] = useState(true);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
     const loadData = async () => {
@@ -55,7 +59,7 @@ function SchemeMatcher({ user }) {
     });
   };
 
-  const findScheme = () => {
+  const findScheme = async () => {
     const cost = Number(form.projectCost || 0);
     const loan = Number(form.requiredLoan || form.projectCost || 0);
 
@@ -73,14 +77,32 @@ function SchemeMatcher({ user }) {
       occupation: profile?.occupation || "",
     };
 
-    const recommendations = getEligibleSchemes(userProfile, {
+    const projectData = {
       projectType: form.projectType,
       projectCost: cost,
       requiredLoan: loan,
       purpose: form.purpose || "business",
-    }, schemes);
+    };
 
-    setResult(recommendations[0] || null);
+    try {
+      if (useAI) {
+        setAiLoading(true);
+        setAiError("");
+        const aiRecommendation = await getAISchemeRecommendation(userProfile, projectData, schemes);
+        setResult(aiRecommendation);
+      } else {
+        const recommendations = getEligibleSchemes(userProfile, projectData, schemes);
+        setResult(recommendations[0] || null);
+      }
+    } catch (err) {
+      console.error("Recommendation error:", err);
+      setAiError(err.message || "Unable to get recommendations");
+      // Fallback to rule-based matching
+      const recommendations = getEligibleSchemes(userProfile, projectData, schemes);
+      setResult(recommendations[0] || null);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   if (loading) {
@@ -157,7 +179,28 @@ function SchemeMatcher({ user }) {
             <input type="text" name="purpose" placeholder="e.g. business expansion" value={form.purpose} onChange={handleChange} />
           </div>
 
-          <button className="primary-button full" onClick={findScheme}>✦ Find Matching Schemes</button>
+          <div className="form-group" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <input
+              type="checkbox"
+              id="useAI"
+              checked={useAI}
+              onChange={(e) => setUseAI(e.target.checked)}
+              style={{ cursor: "pointer", width: "18px", height: "18px" }}
+            />
+            <label htmlFor="useAI" style={{ cursor: "pointer", marginBottom: 0 }}>
+              Use AI for smarter recommendations
+            </label>
+          </div>
+
+          <button className="primary-button full" onClick={findScheme} disabled={aiLoading}>
+            {aiLoading ? "🔄 Finding best match..." : "✦ Find Matching Schemes"}
+          </button>
+
+          {aiError && (
+            <div style={{ marginTop: "10px", padding: "10px", backgroundColor: "#fee2e2", color: "#991b1b", borderRadius: "4px", fontSize: "14px" }}>
+              ⚠️ {aiError}
+            </div>
+          )}
         </div>
 
         <div className="matcher-result">
@@ -169,30 +212,52 @@ function SchemeMatcher({ user }) {
             </div>
           ) : (
             <div className="result-card">
-              <span className="recommended">Rule-based recommendation</span>
-              <h2>{result.name}</h2>
+              <span className="recommended">{result.aiGenerated ? "🤖 AI Recommendation" : "Rule-based recommendation"}</span>
+              <h2>{result.schemeName || result.name}</h2>
               <p>{result.description}</p>
 
               <div className="result-stats">
-                <div>
-                  <span>Loan</span>
-                  <strong>₹{Number(result.maximumLoanAmount || 0).toLocaleString("en-IN")}</strong>
-                </div>
-                <div>
-                  <span>Interest</span>
-                  <strong>{result.interestRate || "—"}%</strong>
-                </div>
-                <div>
-                  <span>Score</span>
-                  <strong>{result.score || 0}/100</strong>
-                </div>
+                {result.aiGenerated ? (
+                  <div>
+                    <span>AI Match Score</span>
+                    <strong>{result.eligibilityScore || 0}%</strong>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <span>Loan</span>
+                      <strong>₹{Number(result.maximumLoanAmount || 0).toLocaleString("en-IN")}</strong>
+                    </div>
+                    <div>
+                      <span>Interest</span>
+                      <strong>{result.interestRate || "—"}%</strong>
+                    </div>
+                    <div>
+                      <span>Score</span>
+                      <strong>{result.score || 0}/100</strong>
+                    </div>
+                  </>
+                )}
               </div>
 
               <ul className="recommendation-list">
-                {result.reasons?.map((reason, index) => (
-                  <li key={`${result.id}-${index}`}>{reason}</li>
-                ))}
+                {(result.reasons || result.reasons?.map((reason, index) => (
+                  <li key={`${result.schemeName || result.id}-${index}`}>{reason}</li>
+                )) || (result.reasons || []).map((reason, index) => (
+                  <li key={`result-${index}`}>{reason}</li>
+                )))}
               </ul>
+
+              {result.nextSteps && result.nextSteps.length > 0 && (
+                <div style={{ marginTop: "15px", padding: "10px", backgroundColor: "#f0f9ff", borderRadius: "4px" }}>
+                  <p style={{ fontSize: "12px", fontWeight: "600", marginBottom: "8px", color: "#1e40af" }}>Next Steps:</p>
+                  <ul style={{ marginLeft: "16px", fontSize: "13px" }}>
+                    {result.nextSteps.map((step, index) => (
+                      <li key={`step-${index}`}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
