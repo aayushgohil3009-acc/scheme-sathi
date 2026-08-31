@@ -1,10 +1,12 @@
 import { useEffect, useState, Suspense, lazy } from "react";
-import Navbar from "./Components/Navbar";
-import Sidebar from "./Components/Sidebar";
 import Login from "./Pages/Login";
 import { onAuthStateChanged, logoutUser } from "./firebase/auth";
 
-// Lazy load pages for better performance
+// Lazy load components for better performance
+const Navbar = lazy(() => import("./Components/Navbar"));
+const Sidebar = lazy(() => import("./Components/Sidebar"));
+
+// Lazy load pages
 const Dashboard = lazy(() => import("./Pages/Dashboard"));
 const SchemeMatcher = lazy(() => import("./Pages/SchemeMatcher"));
 const Calculator = lazy(() => import("./Pages/Calculator"));
@@ -13,13 +15,43 @@ const Profile = lazy(() => import("./Pages/Profile"));
 const Applications = lazy(() => import("./Pages/Applications"));
 const SchemeDetails = lazy(() => import("./Pages/SchemeDetails"));
 
-// Loading component for lazy pages
 const PageLoader = () => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
     <div style={{ textAlign: "center" }}>
-      <div style={{ fontSize: "24px", marginBottom: "10px" }}>⏳</div>
-      <p>Loading...</p>
+      <div style={{ fontSize: "48px", marginBottom: "10px", animation: "spin 1s linear infinite" }}>⚡</div>
+      <p style={{ fontSize: "16px", color: "#666" }}>Loading...</p>
     </div>
+  </div>
+);
+
+const AuthLoadingScreen = () => (
+  <div style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100vh",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    fontFamily: "system-ui, -apple-system, sans-serif"
+  }}>
+    <div style={{ textAlign: "center", color: "white" }}>
+      <div style={{
+        fontSize: "48px",
+        marginBottom: "20px",
+        animation: "pulse 2s ease-in-out infinite"
+      }}>💼</div>
+      <h1 style={{ fontSize: "24px", margin: "0 0 10px 0", fontWeight: "600" }}>Scheme Sathi</h1>
+      <p style={{ fontSize: "14px", margin: "0", opacity: "0.9" }}>Finding the perfect scheme for you...</p>
+    </div>
+    <style>{`
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `}</style>
   </div>
 );
 
@@ -48,7 +80,7 @@ function App() {
   }, []);
 
   if (authLoading) {
-    return <div className="auth-loading">Loading...</div>;
+    return <AuthLoadingScreen />;
   }
 
   if (!user) {
@@ -123,16 +155,20 @@ function App() {
 
   return (
     <div className="app">
-      <Sidebar
-        activePage={activePage}
-        setActivePage={(page) => {
-          setActivePage(page);
-          setSelectedScheme(null);
-        }}
-      />
+      <Suspense fallback={null}>
+        <Sidebar
+          activePage={activePage}
+          setActivePage={(page) => {
+            setActivePage(page);
+            setSelectedScheme(null);
+          }}
+        />
+      </Suspense>
 
       <div className="main-area">
-        <Navbar user={user} onLogout={handleLogout} />
+        <Suspense fallback={null}>
+          <Navbar user={user} onLogout={handleLogout} />
+        </Suspense>
         <main className="content">{renderPage()}</main>
       </div>
     </div>
