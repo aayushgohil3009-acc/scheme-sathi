@@ -22,6 +22,7 @@ function Profile({ user }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -69,7 +70,8 @@ function Profile({ user }) {
       setSaving(true);
       setError("");
       await updateUserProfile(user.uid, form);
-      alert("Profile saved successfully.");
+      setSuccess("Profile saved successfully — your matches are now more personalized.");
+      window.setTimeout(() => setSuccess(""), 3500);
     } catch (err) {
       setError(err.message || "Unable to save profile.");
     } finally {
@@ -98,6 +100,7 @@ function Profile({ user }) {
       </div>
 
       {error && <p className="auth-message error">{error}</p>}
+      {success && <div className="toast success-toast" role="status">✓ {success}</div>}
 
       <div className="profile-form-grid">
         <div className="form-group"><label>Name</label><input name="name" value={form.name} onChange={handleChange} /></div>

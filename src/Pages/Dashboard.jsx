@@ -10,6 +10,9 @@ import {
   sortPartnersByDistance,
 } from "../firebase/partnerService";
 import { generateSchemeRecommendations } from "../firebase/recommendationService";
+import demoSchemes from "../data/schemes";
+import demoPartners from "../data/partners";
+import { CircleCheck, IndianRupee, MapPinned, ScanSearch } from "lucide-react";
 
 
 // ======================================================
@@ -45,8 +48,8 @@ function Dashboard({
       if (!user?.uid) {
         if (mounted) {
           setProfile({});
-          setSchemes([]);
-          setPartners([]);
+          setSchemes(demoSchemes);
+          setPartners(demoPartners);
           setLoading(false);
         }
 
@@ -91,8 +94,9 @@ function Dashboard({
             : [];
 
         setProfile(userProfile);
-        setSchemes(availableSchemes);
-        setPartners(availablePartners);
+        // Fall back to the prototype catalogue until Firestore is seeded.
+        setSchemes(availableSchemes.length ? availableSchemes : demoSchemes);
+        setPartners(availablePartners.length ? availablePartners : demoPartners);
 
         const hasSuccessfulLoad =
           userProfileResult.status === "fulfilled" ||
@@ -334,7 +338,7 @@ function Dashboard({
             Number(b?.score || 0) -
             Number(a?.score || 0)
         )
-        .slice(0, 4);
+        .slice(0, 10);
 
     } catch (err) {
       console.error(
@@ -514,7 +518,7 @@ function Dashboard({
       <div className="empty-result">
 
         <div className="ai-circle">
-          ✦
+          <ScanSearch size={28} />
         </div>
 
         <h2>
@@ -602,7 +606,7 @@ function Dashboard({
           className="primary-button"
           onClick={goToSchemeMatcher}
         >
-          ✦ Find My Scheme
+          <ScanSearch size={16} /> Find my scheme
         </button>
 
       </section>
@@ -621,7 +625,7 @@ function Dashboard({
             recommendations.length
           ).padStart(2, "0")}
           subtitle="Based on your profile"
-          icon="✓"
+          icon={<CircleCheck size={19} />}
         />
 
 
@@ -629,7 +633,7 @@ function Dashboard({
           title="Potential Funding"
           value={fundingTotal}
           subtitle="Maximum available amount"
-          icon="₹"
+          icon={<IndianRupee size={19} />}
         />
 
 
@@ -647,7 +651,7 @@ function Dashboard({
             nearestPartners.length
           ).padStart(2, "0")}
           subtitle="Closest channel partners"
-          icon="⌖"
+          icon={<MapPinned size={19} />}
         />
 
       </section>
@@ -709,27 +713,27 @@ function Dashboard({
 
 
                 const loanText =
-                  maximumLoan > 0
+                  scheme?.loan || (maximumLoan > 0
                     ? `₹${maximumLoan.toLocaleString(
                         "en-IN"
                       )}`
-                    : "Amount varies";
+                    : "Amount varies");
 
 
                 const interestText =
-                  scheme?.interestRate !==
+                  scheme?.interest || (scheme?.interestRate !==
                   undefined &&
                   scheme?.interestRate !==
                   null &&
                   scheme?.interestRate !== ""
                     ? `${scheme.interestRate}%`
-                    : "Varies";
+                    : "Varies");
 
 
                 const tenureText =
-                  scheme?.tenureYears
+                  scheme?.tenure || (scheme?.tenureYears
                     ? `${scheme.tenureYears} Years`
-                    : "Flexible";
+                    : "Flexible");
 
 
                 return (
@@ -755,7 +759,7 @@ function Dashboard({
                     tenure={tenureText}
 
                     recommended={
-                      Number(
+                      scheme?.recommended || Number(
                         scheme?.score || 0
                       ) >= 70
                     }
@@ -777,7 +781,7 @@ function Dashboard({
               )}
 
               <div className="ai-circle">
-                ✦
+                <ScanSearch size={28} />
               </div>
 
               <h2>
@@ -817,7 +821,7 @@ function Dashboard({
         <div className="quick-card">
 
           <span>
-            ✦
+            <ScanSearch size={26} />
           </span>
 
 
@@ -841,7 +845,7 @@ function Dashboard({
             className="primary-button"
             onClick={goToSchemeMatcher}
           >
-            Start Scheme Matcher →
+            <ScanSearch size={16} /> Start scheme matcher
           </button>
 
         </div>
@@ -891,7 +895,7 @@ function Dashboard({
                 >
 
                   <div className="partner-icon">
-                    ⌖
+                    <MapPinned size={20} />
                   </div>
 
 

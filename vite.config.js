@@ -7,17 +7,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules/firebase')) {
-            return 'firebase-bundle';
-          }
-          if (id.includes('node_modules/react')) {
-            return 'vendor-react';
-          }
-          if (id.includes('node_modules')) {
-            return 'vendor-other';
-          }
-        }
+        // Let Vite split the lazy Spline import into its own on-demand chunk.
       }
     },
     chunkSizeWarningLimit: 600,
