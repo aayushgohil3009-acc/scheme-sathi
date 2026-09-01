@@ -1,39 +1,41 @@
-import { StrictMode } from "react";
+import { Component, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
 
-// Performance optimization: measure load time
-if (typeof window !== 'undefined' && window.performance) {
-  window.performance.mark('app-start');
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMessage: "" };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMessage: error?.message || "Unknown render error" };
+  }
+
+  componentDidCatch(error) {
+    console.error("Scheme Sathi recovered from a render error:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <main className="app-error-screen"><div><p className="eyebrow">Scheme Sathi</p><h1>We couldn’t load this screen.</h1><p>Refresh the page to continue. The rest of your account and data are safe.</p><details><summary>Technical details</summary><code>{this.state.errorMessage}</code></details><button className="primary-button" onClick={() => window.location.reload()}>Refresh page</button></div></main>;
+    }
+    return this.props.children;
+  }
 }
 
-const root = createRoot(document.getElementById("root"));
+if (typeof window !== "undefined" && window.performance) window.performance.mark("app-start");
 
-root.render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
+createRoot(document.getElementById("root")).render(<StrictMode><AppErrorBoundary><App /></AppErrorBoundary></StrictMode>);
 
-// Mark app render complete
-if (typeof window !== 'undefined' && window.performance) {
-  window.performance.mark('app-loaded');
-  window.performance.measure('app-load-time', 'app-start', 'app-loaded');
-  const measure = window.performance.getEntriesByName('app-load-time')[0];
-  console.log(`⚡ App loaded in ${measure.duration.toFixed(2)}ms`);
+if (typeof window !== "undefined" && window.performance) {
+  window.performance.mark("app-loaded");
+  window.performance.measure("app-load-time", "app-start", "app-loaded");
 }
 
-// Register service worker for caching and offline support
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((registration) => {
-        console.log('✅ Service Worker registered:', registration.scope);
-      })
-      .catch((error) => {
-        console.log('⚠️ Service Worker registration failed:', error);
-      });
-  });
+// This prototype no longer uses offline caching. Remove older workers/caches that can serve stale modules.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => registrations.forEach((registration) => registration.unregister()));
+  if ("caches" in window) caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("scheme-sathi")).map((key) => caches.delete(key))));
 }

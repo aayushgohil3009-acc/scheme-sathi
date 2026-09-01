@@ -1,10 +1,21 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCircle2, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../firebase/firebaseConfig";
 import { loginUser, registerUser, sendResetLink } from "../firebase/auth";
 
 const Spline = lazy(() => import("@splinetool/react-spline"));
+
+class SplineErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error) { console.warn("Spline scene disabled after a loading error:", error); }
+  render() { return this.state.hasError ? this.props.fallback : this.props.children; }
+}
+
+function SplineFallback() {
+  return <div className="spline-fallback" aria-hidden="true"><div className="spline-fallback-orb" /></div>;
+}
 
 function Login({ onLogin, splineSceneUrl = "" }) {
   const [isRegister, setIsRegister] = useState(false);
@@ -15,6 +26,9 @@ function Login({ onLogin, splineSceneUrl = "" }) {
   const [isDesktop, setIsDesktop] = useState(false);
   const splineRef = useRef(null);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const isValidSplineScene = /^https:\/\/prod\.spline\.design\/.+\/scene\.splinecode(?:\?.*)?$/.test(splineSceneUrl);
+  // Spline is deliberately opt-in: the authentication experience must never depend on 3D.
+  const shouldEnableSpline = import.meta.env.VITE_ENABLE_SPLINE === "true";
 
   useEffect(() => {
     const desktopQuery = window.matchMedia("(min-width: 751px)");
@@ -45,10 +59,12 @@ function Login({ onLogin, splineSceneUrl = "" }) {
   };
   const handlePasswordReset = async (event) => { event.preventDefault(); setError(""); setMessage(""); if (!form.email) return setError("Enter your email address first."); try { await sendResetLink(form.email); setMessage("Password reset email sent. Check your inbox."); } catch (authError) { setError(authError.message || getAuthErrorMessage("auth/unknown")); } };
 
+  const canMountSpline = shouldEnableSpline && isDesktop && isVisible && isValidSplineScene;
   return <div className="auth-page">
     <section className="auth-aside" ref={splineRef} aria-hidden="true">
+      <SplineFallback />
+      {canMountSpline && <SplineErrorBoundary fallback={<SplineFallback />}><Suspense fallback={<SplineFallback />}><Spline scene={splineSceneUrl} className="auth-spline" renderOnDemand /></Suspense></SplineErrorBoundary>}
       <div className="auth-aside-copy"><span className="auth-overline">Scheme Sathi</span><h1>Financing, made more navigable.</h1><p>Understand relevant support options and move forward with clarity.</p></div>
-      {isDesktop && isVisible && splineSceneUrl ? <Suspense fallback={<div className="spline-skeleton" />}><Spline scene={splineSceneUrl} className="auth-spline" renderOnDemand /></Suspense> : <div className="spline-skeleton" />}
     </section>
     <main className="auth-panel"><div className="auth-card">
       <div className="auth-logo"><div className="logo-icon">S</div><div><h2>Scheme Sathi</h2><span>Entrepreneur finance</span></div></div>
