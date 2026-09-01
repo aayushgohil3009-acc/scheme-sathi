@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { BriefcaseBusiness, LoaderCircle } from "lucide-react";
-import Login from "./Pages/Login";
 import { onAuthStateChanged, logoutUser } from "./firebase/auth";
 
+// Login (and its optional Spline scene) stays outside the authenticated app bundle.
+const Login = lazy(() => import("./Pages/Login"));
 const Navbar = lazy(() => import("./Components/Navbar"));
 const Sidebar = lazy(() => import("./Components/Sidebar"));
 const Dashboard = lazy(() => import("./Pages/Dashboard"));
@@ -37,7 +38,7 @@ function App() {
   }, []);
 
   if (authLoading) return <AuthLoadingScreen />;
-  if (!user) return <Login onLogin={handleLogin} splineSceneUrl={import.meta.env.VITE_SPLINE_SCENE_URL || ""} />;
+  if (!user) return <Suspense fallback={<AuthLoadingScreen />}><Login onLogin={handleLogin} splineSceneUrl={import.meta.env.VITE_SPLINE_SCENE_URL || ""} /></Suspense>;
 
   const pageProps = { user, onViewScheme: setSelectedScheme, onNavigate: setActivePage };
   const renderPage = () => {
