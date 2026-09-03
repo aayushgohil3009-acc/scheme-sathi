@@ -1,106 +1,83 @@
 import { useEffect, useState } from "react";
+import { ScanSearch } from "lucide-react";
+import LifeEventSelector from "../Components/LifeEventSelector";
+import SchemeAIChatbot from "../Components/SchemeAIChatbot";
+import SupportPathTimeline from "../Components/SupportPathTimeline";
+import { getLifeEventJourney } from "../data/lifeEvents";
+import demoSchemes from "../data/schemes";
+import { generateSchemeRecommendations } from "../firebase/recommendationService";
 import { getAllSchemes } from "../firebase/schemeService";
 import { getUserProfile } from "../firebase/userService";
-import { getAISchemeRecommendation } from "../firebase/aiService";
-import demoSchemes from "../data/schemes";
-import { ScanSearch } from "lucide-react";
 
-// Prototype matcher: ranks each catalogue entry by both category eligibility and loan fit.
-export function findDemoSchemeMatch(catalogue, userProfile, projectData) {
-  const requestedAmount = Number(projectData.requiredLoan || projectData.projectCost || 0);
-  const category = String(userProfile.category || "General").toLowerCase();
-
-  return catalogue
-    .map((scheme) => {
-      const categories = (scheme.eligibleCategories || []).map((item) => item.toLowerCase());
-      const categoryMatch = categories.includes(category);
-      const costMatch = requestedAmount >= Number(scheme.minimumLoanAmount || 0) && requestedAmount <= Number(scheme.maximumLoanAmount || 0);
-      const score = (categoryMatch ? 55 : 10) + (costMatch ? 35 : 0) + (scheme.recommended ? 10 : 0);
-      return {
-        ...scheme,
-        score,
-        eligibilityScore: score,
-        reasons: [
-          categoryMatch ? `${userProfile.category || "Your"} category is supported by this scheme.` : "This scheme is open to a related entrepreneur group.",
-          costMatch ? "Your requested loan fits this scheme's funding range." : "Your project may need a revised loan amount for this scheme.",
-          `Supports ${projectData.projectType || "business"} enterprises.`,
-        ],
-      };
-    })
-    .sort((first, second) => second.score - first.score)[0] || null;
+function getAge(dateOfBirth) {
+  const date = dateOfBirth?.toDate ? dateOfBirth.toDate() : new Date(dateOfBirth);
+  if (!dateOfBirth || Number.isNaN(date.getTime())) return 30;
+  const today = new Date();
+  return today.getFullYear() - date.getFullYear() - (today < new Date(today.getFullYear(), date.getMonth(), date.getDate()) ? 1 : 0);
 }
 
 function SchemeMatcher({ user }) {
+  const [mode, setMode] = useState("questions");
   const [form, setForm] = useState({ projectType: "", projectCost: "", requiredLoan: "", income: "", education: "", purpose: "" });
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState({});
   const [schemes, setSchemes] = useState([]);
-  const [result, setResult] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [journey, setJourney] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState("");
+  const [freeTextGoal, setFreeTextGoal] = useState("");
   const [loading, setLoading] = useState(true);
+  const [matching, setMatching] = useState(false);
   const [error, setError] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [useAI, setUseAI] = useState(true);
-  const [aiError, setAiError] = useState("");
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!user?.uid) return setLoading(false);
+    let active = true;
+    async function loadData() {
+      if (!user?.uid) { if (active) { setSchemes(demoSchemes); setLoading(false); } return; }
       try {
-        const [userProfile, allSchemes] = await Promise.all([getUserProfile(user.uid).catch(() => null), getAllSchemes().catch(() => [])]);
-        setProfile(userProfile || {});
-        setSchemes(allSchemes.length ? allSchemes : demoSchemes);
-        if (userProfile) setForm((current) => ({ ...current, income: userProfile.annualIncome || "", education: userProfile.education || "" }));
-      } catch { setError("Unable to load data. Please refresh the page."); } finally { setLoading(false); }
-    };
+        const [userProfile, availableSchemes] = await Promise.all([getUserProfile(user.uid).catch(() => ({})), getAllSchemes().catch(() => [])]);
+        if (!active) return;
+        const nextProfile = userProfile || {};
+        setProfile(nextProfile);
+        setSchemes(Array.isArray(availableSchemes) && availableSchemes.length ? availableSchemes : demoSchemes);
+        setForm((current) => ({ ...current, income: nextProfile.annualIncome || "", education: nextProfile.education || "" }));
+      } catch { if (active) setError("Unable to load data. Please refresh the page."); } finally { if (active) setLoading(false); }
+    }
     loadData();
-  }, [user]);
+    return () => { active = false; };
+  }, [user?.uid]);
 
-  const handleChange = (event) => setForm({ ...form, [event.target.name]: event.target.value });
-  const findScheme = async () => {
-    const cost = Number(form.projectCost || 0);
-    const loan = Number(form.requiredLoan || form.projectCost || 0);
-    if (!form.projectType || !cost || !form.income) return setFormError("Add your project type, estimated cost, and annual income to start matching.");
-    setFormError(""); setAiError(""); setResult(null); setAiLoading(true);
-    const scanStartedAt = Date.now();
-    const userProfile = { age: profile?.dateOfBirth ? new Date().getFullYear() - new Date(profile.dateOfBirth).getFullYear() : 30, income: Number(form.income), category: profile?.category || "General", education: form.education || profile?.education || "", state: profile?.state || "", occupation: profile?.occupation || "" };
-    const projectData = { projectType: form.projectType, projectCost: cost, requiredLoan: loan, purpose: form.purpose || "business" };
-    try {
-      const catalogue = schemes.length ? schemes : demoSchemes;
-      const recommendation = useAI ? await getAISchemeRecommendation(userProfile, projectData, catalogue) : findDemoSchemeMatch(catalogue, userProfile, projectData);
-      const delay = 950 - (Date.now() - scanStartedAt);
-      if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
-      setResult(recommendation);
-    } catch (err) {
-      setAiError(err.message || "AI matching is unavailable, so we used eligibility rules instead.");
-      setResult(findDemoSchemeMatch(schemes.length ? schemes : demoSchemes, userProfile, projectData));
-    } finally { setAiLoading(false); }
+  const makeApplicant = (income, education) => ({ age: getAge(profile?.dateOfBirth), income: Number(income || profile?.annualIncome || 0), category: profile?.category || "General", education: education || profile?.education || "", state: profile?.state || "", occupation: profile?.occupation || "" });
+  const runMatcher = (applicant, project) => generateSchemeRecommendations(applicant, project, Array.isArray(schemes) && schemes.length ? schemes : demoSchemes);
+
+  const findScheme = () => {
+    const projectCost = Number(form.projectCost || 0);
+    if (!form.projectType || !projectCost || !form.income) { setFormError("Add your project type, estimated cost, and annual income to start matching."); return; }
+    setMatching(true); setFormError(""); setJourney(null);
+    const project = { projectType: form.projectType, projectCost, requiredLoan: Number(form.requiredLoan || projectCost), purpose: form.purpose || "business" };
+    const result = runMatcher(makeApplicant(form.income, form.education), project);
+    setRecommendations(Array.isArray(result) ? result : []); setMatching(false);
+  };
+
+  const findLifeEventSupport = () => {
+    const nextJourney = getLifeEventJourney(selectedEvent, freeTextGoal);
+    if (!nextJourney) return;
+    setMatching(true); setFormError("");
+    // Existing deterministic engine call: generateSchemeRecommendations(applicant, event.matcherInput, catalogue).
+    const result = runMatcher(makeApplicant(), nextJourney.matcherInput);
+    setJourney(nextJourney); setRecommendations(Array.isArray(result) ? result : []); setMatching(false);
   };
 
   if (loading) return <div className="empty-result page-skeleton"><div className="skeleton-orb" /><h2>Preparing your matcher...</h2></div>;
   if (error) return <div className="empty-result"><div className="ai-circle">!</div><h2>Unable to load recommendations</h2><p>{error}</p><button className="primary-button" onClick={() => window.location.reload()}>Refresh page</button></div>;
-  const confidence = Math.min(Number(result?.eligibilityScore || result?.score || 0), 100);
+  const primaryResult = recommendations[0] || null;
+  const confidence = Math.min(Number(primaryResult?.score || 0), 100);
 
-  return <div className="matcher-page">
-    <div className="page-heading animate-in"><p className="eyebrow">AI SCHEME MATCHER</p><h1>Find the right scheme</h1><p>Tell us about your project and we’ll identify suitable government financing options.</p></div>
-    <div className="matcher-container">
-      <div className="matcher-form animate-in"><h2>Tell us about your requirements</h2>
-        <div className="form-group"><label>Project Type</label><select name="projectType" value={form.projectType} onChange={handleChange}><option value="">Select project type</option><option value="Dairy">Dairy</option><option value="Retail">Retail</option><option value="Textiles">Textiles</option><option value="Manufacturing">Manufacturing</option><option value="Services">Services</option></select></div>
-        <div className="form-group"><label>Estimated Project Cost</label><div className="input-prefix"><span>₹</span><input type="number" name="projectCost" placeholder="Example: 500000" value={form.projectCost} onChange={handleChange} /></div></div>
-        <div className="form-group"><label>Required Loan Amount</label><div className="input-prefix"><span>₹</span><input type="number" name="requiredLoan" placeholder="Optional loan need" value={form.requiredLoan} onChange={handleChange} /></div></div>
-        <div className="form-group"><label>Annual Family Income</label><div className="input-prefix"><span>₹</span><input type="number" name="income" placeholder="Maximum ₹5,00,000" value={form.income} onChange={handleChange} /></div></div>
-        <div className="form-group"><label>Education Status</label><select name="education" value={form.education} onChange={handleChange}><option value="">Select status</option><option value="School">School</option><option value="College">College</option><option value="Graduate">Graduate</option><option value="Post Graduate">Post Graduate</option></select></div>
-        <div className="form-group"><label>Purpose</label><input type="text" name="purpose" placeholder="e.g. business expansion" value={form.purpose} onChange={handleChange} /></div>
-        <div className="form-group ai-toggle"><input type="checkbox" id="useAI" checked={useAI} onChange={(event) => setUseAI(event.target.checked)} /><label htmlFor="useAI">Use AI for smarter recommendations</label></div>
-        <button className="primary-button full" onClick={findScheme} disabled={aiLoading}>{aiLoading ? "Analysing your profile..." : <><ScanSearch size={16} /> Find matching schemes</>}</button>
-        {formError && <p className="inline-feedback error">{formError}</p>}{aiError && <p className="inline-feedback error">{aiError}</p>}
-      </div>
-      <div className="matcher-result animate-in">
-        {aiLoading ? <div className="ai-scanning" aria-live="polite"><div className="scanner-orb"><ScanSearch size={27} /></div><div className="scan-line" /><h2>Finding your strongest match</h2><p>Comparing eligibility, funding, and project-fit signals.</p><div className="scan-steps"><span>Profile</span><span>Eligibility</span><span>Funding</span></div></div>
-          : !result ? <div className="empty-result"><div className="ai-circle"><ScanSearch size={28} /></div><h2>Your recommendation will appear here</h2><p>Complete the form and our matching engine will identify suitable schemes.</p></div>
-          : <div className="result-card animate-result"><span className="recommended">{result.aiGenerated ? "Recommended match" : "Smart recommendation"}</span><h2>{result.schemeName || result.name}</h2><p>{result.description}</p><div className="confidence-block"><div className="confidence-heading"><span>Match confidence</span><strong>{confidence}%</strong></div><div className="confidence-track"><span style={{ width: `${confidence}%` }} /></div></div><div className="result-stats"><div><span>Loan</span><strong>₹{Number(result.maximumLoanAmount || 0).toLocaleString("en-IN")}</strong></div><div><span>Interest</span><strong>{result.interestRate || "—"}%</strong></div><div><span>Score</span><strong>{confidence}/100</strong></div></div>{Array.isArray(result.reasons) && result.reasons.length > 0 && <ul className="recommendation-list">{result.reasons.map((reason, index) => <li key={`${result.id || "result"}-${index}`}>{reason}</li>)}</ul>}{result.nextSteps?.length > 0 && <div className="next-steps"><p>Next steps</p><ul>{result.nextSteps.map((step, index) => <li key={`step-${index}`}>{step}</li>)}</ul></div>}</div>}
-      </div>
-    </div>
-  </div>;
+  return <div className="matcher-page"><div className="page-heading animate-in"><p className="eyebrow">SCHEME MATCHER</p><h1>Find potentially suitable support</h1><p>Answer questions or describe your current situation. Results are based on the information available; final eligibility should be verified.</p></div>
+    <div className="matcher-mode-tabs" role="tablist"><button type="button" className={mode === "questions" ? "active" : ""} onClick={() => setMode("questions")} role="tab" aria-selected={mode === "questions"}>Answer questions</button><button type="button" className={mode === "situation" ? "active" : ""} onClick={() => setMode("situation")} role="tab" aria-selected={mode === "situation"}>Describe your situation</button></div>
+    <div className="matcher-container"><div className="matcher-form animate-in">{mode === "questions" ? <><h2>Tell us about your requirements</h2><div className="form-group"><label>Project Type</label><select name="projectType" value={form.projectType} onChange={(event) => setForm({ ...form, [event.target.name]: event.target.value })}><option value="">Select project type</option>{["Dairy", "Retail", "Textiles", "Manufacturing", "Services"].map((item) => <option key={item}>{item}</option>)}</select></div><div className="form-group"><label>Estimated Project Cost</label><div className="input-prefix"><span>₹</span><input type="number" name="projectCost" value={form.projectCost} onChange={(event) => setForm({ ...form, [event.target.name]: event.target.value })} /></div></div><div className="form-group"><label>Required Loan Amount</label><div className="input-prefix"><span>₹</span><input type="number" name="requiredLoan" value={form.requiredLoan} onChange={(event) => setForm({ ...form, [event.target.name]: event.target.value })} /></div></div><div className="form-group"><label>Annual Family Income</label><div className="input-prefix"><span>₹</span><input type="number" name="income" value={form.income} onChange={(event) => setForm({ ...form, [event.target.name]: event.target.value })} /></div></div><div className="form-group"><label>Education Status</label><select name="education" value={form.education} onChange={(event) => setForm({ ...form, [event.target.name]: event.target.value })}><option value="">Select status</option>{["School", "College", "Graduate", "Post Graduate"].map((item) => <option key={item}>{item}</option>)}</select></div><div className="form-group"><label>Purpose</label><input name="purpose" value={form.purpose} onChange={(event) => setForm({ ...form, [event.target.name]: event.target.value })} placeholder="e.g. business expansion" /></div><button className="primary-button full" onClick={findScheme} disabled={matching}><ScanSearch size={16} /> Find matching schemes</button></> : <LifeEventSelector selectedEvent={selectedEvent} freeTextGoal={freeTextGoal} onSelectEvent={setSelectedEvent} onGoalChange={setFreeTextGoal} onSubmit={findLifeEventSupport} loading={matching} />}{formError && <p className="inline-feedback error">{formError}</p>}</div>
+      <div className="matcher-result animate-in">{matching ? <div className="ai-scanning"><div className="scanner-orb"><ScanSearch size={27} /></div><h2>Finding suitable support</h2><p>Applying your information to the existing scheme recommendation engine.</p></div> : journey ? <SupportPathTimeline currentSituation={journey.currentSituation} goal={journey.goal} requiredSupport={journey.requiredSupport} steps={journey.supportPath} /> : !primaryResult ? <div className="empty-result"><div className="ai-circle"><ScanSearch size={28} /></div><h2>Your recommendation will appear here</h2><p>Complete the form or choose a current situation to find potentially suitable schemes.</p></div> : <div className="result-card animate-result"><span className="recommended">Potentially suitable match</span><h2>{primaryResult.name || primaryResult.title}</h2><p>{primaryResult.description}</p><div className="confidence-block"><div className="confidence-heading"><span>Match score</span><strong>{confidence}%</strong></div><div className="confidence-track"><span style={{ width: `${confidence}%` }} /></div></div><div className="result-stats"><div><span>Loan</span><strong>₹{Number(primaryResult.maximumLoanAmount || 0).toLocaleString("en-IN")}</strong></div><div><span>Interest</span><strong>{primaryResult.interestRate || "—"}%</strong></div><div><span>Score</span><strong>{confidence}/100</strong></div></div>{Array.isArray(primaryResult.eligibleReasons) && <ul className="recommendation-list">{primaryResult.eligibleReasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>}<p className="support-disclaimer">Potentially suitable based on the information available. Final eligibility should be verified.</p></div>}</div></div>
+    <SchemeAIChatbot profile={profile} recommendations={recommendations} schemes={schemes} selectedScheme={primaryResult} supportPath={journey ? { currentSituation: journey.currentSituation, goal: journey.goal, requiredSupport: journey.requiredSupport, steps: journey.supportPath } : null} /></div>;
 }
 
 export default SchemeMatcher;

@@ -39,7 +39,7 @@ function App() {
   const navigate = (page) => { setActivePage(page); setSelectedScheme(null); };
   if (authLoading) return <AuthLoadingScreen />;
   if (!user) return <SectionErrorBoundary><Login onLogin={setUser} splineSceneUrl={import.meta.env.VITE_SPLINE_SCENE_URL || ""} /></SectionErrorBoundary>;
-  const content = selectedScheme ? <SchemeDetails scheme={selectedScheme} onBack={() => setSelectedScheme(null)} /> : activePage === "Dashboard" ? <Dashboard user={user} onViewScheme={setSelectedScheme} onNavigate={navigate} /> : activePage === "Scheme Matcher" ? <SchemeMatcher user={user} /> : activePage === "Financial Calculator" ? <Calculator /> : activePage === "Channel Partners" ? <Partners user={user} /> : activePage === "Applications" ? <Applications user={user} /> : <Profile user={user} />;
+  const content = selectedScheme ? <SchemeDetails scheme={selectedScheme} onBack={() => setSelectedScheme(null)} user={user} /> : activePage === "Dashboard" ? <Dashboard user={user} onViewScheme={setSelectedScheme} onNavigate={navigate} /> : activePage === "Scheme Matcher" ? <SchemeMatcher user={user} /> : activePage === "Financial Calculator" ? <Calculator /> : activePage === "Channel Partners" ? <Partners user={user} /> : activePage === "Applications" ? <Applications user={user} /> : <Profile user={user} />;
 
   return <div className="app"><Sidebar activePage={activePage} setActivePage={navigate} /><div className="main-area"><Navbar user={user} onLogout={async () => { await logoutUser(); setUser(null); }} /><main className="content"><SectionErrorBoundary><Suspense fallback={<PageLoader />}>{content}</Suspense></SectionErrorBoundary></main></div></div>;
 }

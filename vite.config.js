@@ -24,6 +24,15 @@ export default defineConfig({
     sourcemap: false,
   },
   server: {
+    host: '0.0.0.0',
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     // Never cache source or HMR modules in development; stale modules can look like a blank app.
     headers: {
       'Cache-Control': 'no-store',
@@ -35,8 +44,9 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
+    force: true,
     include: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
-    // Spline is optional and lazy; keeping it out of the dev optimiser prevents a second React runtime.
+    // Spline is optional and lazy; keeping it out of the dev optimizer prevents a second React runtime.
     exclude: ['@splinetool/react-spline', '@splinetool/runtime'],
   }
 })

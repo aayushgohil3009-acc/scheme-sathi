@@ -1,4 +1,4 @@
-import { Building2, Calculator, CircleHelp, Handshake, LayoutDashboard, ScanSearch, UserRound } from "lucide-react";
+import { Building2, Calculator, CircleHelp, Handshake, LayoutDashboard, ScanSearch, UserRound, Workflow } from "lucide-react";
 
 function Sidebar({ activePage, setActivePage }) {
   const menuItems = [

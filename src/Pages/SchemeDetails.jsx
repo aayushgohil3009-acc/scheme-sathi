@@ -1,13 +1,14 @@
 import { useState } from "react";
+import SchemeAIChatbot from "../Components/SchemeAIChatbot";
 
-function SchemeDetails({ scheme, onBack }) {
+function SchemeDetails({ scheme, onBack, profile = {}, recommendations = [] }) {
   const [applied, setApplied] = useState(false);
   if (!scheme) return <div className="empty-result"><p>No scheme selected.</p><button className="primary-button" onClick={onBack}>← Back to Dashboard</button></div>;
   const schemeName = scheme.name || scheme.title || "Scheme";
   const loanText = scheme.loan || `₹${Number(scheme.maximumLoanAmount || 0).toLocaleString("en-IN")}`;
   const interestText = scheme.interest || `${scheme.interestRate || 0}%`;
   const tenureText = scheme.tenure || `${scheme.tenureYears || 0} Years`;
-  const requiredDocuments = scheme.requiredDocuments || ["Aadhaar Card", "Income Certificate", "Project Proposal / Business Plan"];
+  const requiredDocuments = Array.isArray(scheme.requiredDocuments) && scheme.requiredDocuments.length ? scheme.requiredDocuments : ["Aadhaar Card", "Income Certificate", "Project Proposal / Business Plan"];
 
   return <div className="details-page">
     <button className="back-button" onClick={onBack}>← Back</button>
@@ -17,6 +18,7 @@ function SchemeDetails({ scheme, onBack }) {
     <div className="details-section"><h2>Documents Required</h2><ul>{requiredDocuments.map((documentName) => <li key={documentName}>{documentName}</li>)}</ul></div>
     <button className="primary-button full" onClick={() => { setApplied(true); window.setTimeout(() => setApplied(false), 4000); }}>Apply for this Scheme</button>
     {applied && <div className="toast success-toast" role="status">✓ Application started — we’ll guide you through the next steps.</div>}
+    <SchemeAIChatbot profile={profile || {}} recommendations={recommendations || []} selectedScheme={scheme} />
   </div>;
 }
 

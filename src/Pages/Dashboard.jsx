@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import StatCard from "../Components/StatCard";
 import SchemeCard from "../Components/SchemeCard";
+import SchemeAIChatbot from "../Components/SchemeAIChatbot";
 import SchemeSeedButton from "../Components/SchemeSeedButton";
 
 import { getUserProfile } from "../firebase/userService";
@@ -954,6 +955,8 @@ function Dashboard({
         )}
 
       </section>
+
+      <SchemeAIChatbot profile={profile || {}} recommendations={recommendations} schemes={schemes} />
 
     </div>
   );

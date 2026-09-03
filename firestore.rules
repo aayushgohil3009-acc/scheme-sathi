@@ -13,6 +13,11 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow write: if isOwner(userId);
       allow create: if isOwner(userId);
+
+      match /digitalTwins/{scenarioId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId);
+      }
     }
 
     match /schemes/{schemeId} {
