@@ -12,7 +12,7 @@ function Navbar({ user, onLogout }) {
       <button className="icon-button" onClick={() => setDark((current) => !current)} aria-label="Toggle colour theme">{dark ? <Sun size={17} /> : <Moon size={17} />}</button>
       <button className="language-btn"><Languages size={15} /> हिंदी / English</button>
       <button className="icon-button notification" aria-label="Notifications"><Bell size={18} /></button>
-      <div className="user-mini"><div className="avatar">{userName.charAt(0).toUpperCase()}</div><div><strong>{userName}</strong><small>Entrepreneur</small></div></div>
+      <div className="user-mini"><div className="avatar">{userName.charAt(0).toUpperCase()}</div><div><strong>{userName}</strong></div></div>
       <button className="logout-btn" onClick={onLogout}><LogOut size={15} /> <span>Logout</span></button>
     </div>
   </header>;

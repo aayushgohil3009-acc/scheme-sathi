@@ -586,10 +586,6 @@ function Dashboard({
 
         <div>
 
-          <p className="eyebrow">
-            GOOD MORNING 👋
-          </p>
-
           <h1>
             Welcome back, {userName}
           </h1>
